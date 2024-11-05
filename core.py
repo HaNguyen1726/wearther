@@ -50,6 +50,16 @@ class FashionRecommenderApp:
         ''')
 
         self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS PersonalRecommendations (
+            item_id INTEGER PRIMARY KEY,
+            uid INTEGER,
+            weather TEXT,
+            dress_code TEXT,
+            FOREIGN KEY (item_id) REFERENCES Clothing(item_id),
+            FOREIGN KEY (uid) REFERENCES User(uid)
+        )
+        ''')
+        self.cursor.execute('''
         CREATE TABLE IF NOT EXISTS TrendingRecommendations (
             recommendation_outfit_id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT,
@@ -82,3 +92,24 @@ class FashionRecommenderApp:
         self.create_user_page()
         self.create_closet_page()
         self.create_outfit_generator_page()
+        
+     def create_user_page(self):
+            user_frame = ttk.Frame(self.notebook)
+            self.notebook.add(user_frame, text='Create Account')
+            
+            #Prompt the user to input their name
+            ttk.Label(user_frame, text="Username:").grid(row=1, column=0, pady=5, padx=5)
+            self.username_entry = ttk.Entry(user_frame)
+            self.username_entry.grid(row=1, column=1, pady=5, padx=5)
+            
+            #Prompt the user to choose their favorite color from the text box
+            ttk.Label(user_frame, text="Color Preference:").grid(row=2, column=0, pady=5, padx=5)
+            self.color_var = tk.StringVar()
+            self.color_combo = ttk.Combobox(user_frame, values=['Black', 'White', 'Blue', 'Red'], textvariable=self.color_var)
+            self.color_combo.grid(row=2, column=1, pady=5, padx=5)
+    
+            self.material_var = tk.StringVar()
+            self.material_combo = ttk.Combobox(user_frame, values=['Cotton', 'Wool', 'Silk', 'Linen'], textvariable=self.material_var)
+            self.material_combo.grid(row=3, column=1, pady=5, padx=5)
+    
+            ttk.Button(user_frame, text="Create Account", command=self.create_user).grid(row=4, column=0, columnspan=2, pady=20)
