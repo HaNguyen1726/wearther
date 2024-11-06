@@ -17,15 +17,5 @@ The third table, **PersonalRecommendation** has item_id, uid, weather, dress_cod
 
 The last table is **TrendingRecommedation**. It is intended as the main monetization mechanism of this app/ business where the most trendy items are recommended and users are encouraged to purchase these. It includes recommendation_outfit_id, purchase_link, rec_type, description. rec_type includes values such as 'Must haves', 'Fall Favorites', etc.
 
-## CRUD Execution
-
-
-## App Functionalites
-
-## Git Repo's Commit Explanation
-o List of git commits done.
-o (IMPORTANT) the link to your project’s demo video (3 – 5 minutes, unlisted on YouTube).
-Please explain the following points in your video:
- General description of your database, including the choice of DB software (e.g., SQLite)
- A running demo of your application.
- An overview of your GitHub repo’s commits
+## How to use
+Donwload the full_app folder and run it 
