@@ -141,6 +141,7 @@ class FashionRecommenderApp:
             entry.grid(row=i+1, column=1, pady=5, padx=5)
 
         ttk.Button(closet_frame, text="Add Item", command=self.add_clothing_item).grid(row=len(self.closet_entries)+1, column=0, columnspan=2, pady=20)
+        ttk.Button(closet_frame, text="Show Closet", command=self.show_clothing_item).grid(row=len(self.closet_entries)+1, column=2, columnspan=2, pady=20)
 
     def create_outfit_generator_page(self):
         generator_frame = ttk.Frame(self.notebook)
@@ -157,6 +158,7 @@ class FashionRecommenderApp:
         self.dress_code_combo.grid(row=2, column=1, pady=5, padx=5)
 
         ttk.Button(generator_frame, text="Recommend Outfit", command=self.generate_outfit).grid(row=3, column=0, columnspan=2, pady=20)
+        
 
     def create_user(self):
         try:
@@ -193,6 +195,49 @@ class FashionRecommenderApp:
         except sqlite3.Error:
             messagebox.showerror("Error", "Error adding item.")
 
+                
+    def show_clothing_item(self):
+        if not self.current_user:
+            messagebox.showerror("Error", "Please create an account first!")
+            return
+
+        try:
+            # Retrieve clothing items for the current user
+            self.cursor.execute('''
+                SELECT item_name, category, material, color, weather_type, dress_code
+                FROM Clothing
+                WHERE uid = ?
+                LIMIT 6
+            ''', (self.current_user,))
+            items = self.cursor.fetchall()
+
+            if items:
+                # Check if the "Your Closet" tab already exists
+                for i in range(len(self.notebook.tabs())):
+                    if self.notebook.tab(i, "text") == "Your Closet":
+                        self.notebook.forget(i)  # Remove existing "Your Closet" tab
+
+                # Create a new "Your Closet" tab
+                closet_frame = ttk.Frame(self.notebook)
+                self.notebook.add(closet_frame, text="Your Closet")
+
+                # Display each item in the frame
+                for i, item in enumerate(items):
+                    item_label = f"Item Name: {item[0]}, Category: {item[1]}, Material: {item[2]}, Color: {item[3]}, Weather Type: {item[4]}, Dress Code: {item[5]}"
+                    ttk.Label(closet_frame, text=item_label).grid(row=i, column=0, sticky='w', padx=10, pady=5)
+
+                # Add a button to close the "Your Closet" tab
+                ttk.Button(closet_frame, text="Close Tab", command=lambda: self.notebook.forget(closet_frame)).grid(row=len(items), column=0, pady=20)
+
+            else:
+                messagebox.showinfo("No Items", "Your closet is empty. Please add items first.")
+
+        except sqlite3.Error as e:
+            messagebox.showerror("Error", f"Error retrieving items: {str(e)}")
+
+
+
+
     def generate_outfit(self):
         if not self.current_user:
             messagebox.showerror("Error", "Please create an account first!")
@@ -205,27 +250,45 @@ class FashionRecommenderApp:
             messagebox.showerror("Error", "Please select both weather and dress code!")
             return
 
+        # Clear previous recommendations if they exist
+        if hasattr(self, 'recommendation_frame'):
+            for widget in self.recommendation_frame.winfo_children():
+                widget.destroy()
+        else:
+            # Create a frame to display recommendations if it doesn't exist
+            self.recommendation_frame = ttk.Frame(self.notebook.nametowidget(self.notebook.tabs()[-1]))
+            self.recommendation_frame.grid(row=4, column=0, columnspan=2, pady=10)
+
         categories = ['top', 'bottom', 'outerwear', 'shoes']
         outfit = {}
-        for category in categories:
-            if category == 'outerwear' and weather == 'hot':
-                continue
 
-            self.cursor.execute('''
-                SELECT item_name, color, material
-                FROM Clothing
-                WHERE uid = ? AND category = ? AND weather_type = ? AND dress_code = ?
-            ''', (self.current_user, category, weather, dress_code))
-            item = self.cursor.fetchone()
-            if item:
-                outfit[category] = item
+        try:
+            # Fetch recommended items for each category based on weather and dress code
+            for category in categories:
+                if category == 'outerwear' and weather == 'hot':
+                    continue
 
-        if outfit:
-            for category, item in outfit.items():
-                print(f"{category.capitalize()}: {item[0]} ({item[1]}, {item[2]})")
-        else:
-            messagebox.showinfo("No Matches", "No outfit matches your criteria.")
-            
+                self.cursor.execute('''
+                    SELECT item_name, color, material
+                    FROM Clothing
+                    WHERE uid = ? AND category = ? AND weather_type = ? AND dress_code = ?
+                    LIMIT 1
+                ''', (self.current_user, category, weather, dress_code))
+                item = self.cursor.fetchone()
+                if item:
+                    outfit[category] = item
+
+            # Display outfit recommendations in the recommendation_frame
+            if outfit:
+                ttk.Label(self.recommendation_frame, text="Recommended Outfit:", font=('Arial', 12, 'bold')).grid(row=0, column=0, columnspan=2, pady=10)
+                for i, (category, item) in enumerate(outfit.items(), start=1):
+                    item_text = f"{category.capitalize()}: {item[0]} ({item[1]}, {item[2]})"
+                    ttk.Label(self.recommendation_frame, text=item_text).grid(row=i, column=0, columnspan=2, sticky='w')
+            else:
+                ttk.Label(self.recommendation_frame, text="No suitable items found. Please add more items to your closet.", font=('Arial', 10)).grid(row=1, column=0, columnspan=2)
+
+        except sqlite3.Error as e:
+            messagebox.showerror("Error", f"Error generating outfit: {str(e)}")
 
     def display_trending_items(self, frame):
     # Reset image references to prevent caching of old images
