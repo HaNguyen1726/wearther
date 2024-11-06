@@ -23,6 +23,9 @@ class FashionRecommenderApp:
         self.create_notebook()
         self.current_user = None
 
+#Create tables in the DB
+
+    # User table has id, username, material, color
     def create_tables(self):
         # User table
         self.cursor.execute('''
@@ -49,6 +52,7 @@ class FashionRecommenderApp:
         )
         ''')
 
+        # Trending table has id, username, material, color
         self.cursor.execute('''
         CREATE TABLE IF NOT EXISTS TrendingRecommendations (
             recommendation_outfit_id INTEGER PRIMARY KEY AUTOINCREMENT,
