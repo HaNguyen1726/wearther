@@ -19,3 +19,21 @@ The last table is **TrendingRecommedation**. It is intended as the main monetiza
 
 ## How to use
 Donwload the full_app folder and run it 
+
+## Directory
+wearther/
+│
+├── demo.py                    # Main application file where the Tkinter app runs
+├── README.md                  # Project documentation
+│
+├── database/                  # Folder for database-related files
+│   └── fashion_db.sqlite      # SQLite database file
+│
+├── images/                    # Folder to store images for the application
+   ├── white_shorts.png
+   ├── wide_pants.png
+   ├── pullover.png
+   ├── midi.png
+   ├── cashmere_vest.png
+   └── cropped_sweatshirt.png
+
