@@ -59,6 +59,19 @@ class FashionRecommenderApp:
         )
         ''')
 
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS PersonalRecommendations (
+            recommendation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            uid INTEGER,
+            item_id INTEGER,
+            weather TEXT,
+            dress_code TEXT,
+            feedback TEXT,
+            FOREIGN KEY (uid) REFERENCES User(uid),
+            FOREIGN KEY (item_id) REFERENCES Clothing(item_id)
+            )
+            ''')
+
         # Insert data into TrendingRecommendations table if empty
         self.cursor.execute("SELECT COUNT(*) FROM TrendingRecommendations")
         if self.cursor.fetchone()[0] == 0:
@@ -238,7 +251,7 @@ class FashionRecommenderApp:
 
 
 
-    def generate_outfit(self):
+       def generate_outfit(self):
         if not self.current_user:
             messagebox.showerror("Error", "Please create an account first!")
             return
@@ -259,76 +272,81 @@ class FashionRecommenderApp:
             self.recommendation_frame = ttk.Frame(self.notebook.nametowidget(self.notebook.tabs()[-1]))
             self.recommendation_frame.grid(row=4, column=0, columnspan=2, pady=10)
 
-        categories = ['top', 'bottom', 'outerwear', 'shoes']
-        outfit = {}
-
         try:
-            # Fetch recommended items for each category based on weather and dress code
-            for category in categories:
-                if category == 'outerwear' and weather == 'hot':
-                    continue
+            # Check for a previously liked outfit for the same weather and dress code
+            self.cursor.execute('''
+                SELECT c.item_name, c.category, c.material, c.color, pr.recommendation_id
+                FROM Clothing c
+                JOIN PersonalRecommendations pr ON c.item_id = pr.item_id
+                WHERE pr.uid = ? AND pr.weather = ? AND pr.dress_code = ? AND pr.feedback = 'like'
+            ''', (self.current_user, weather, dress_code))
+            liked_outfit = self.cursor.fetchall()
 
-                self.cursor.execute('''
-                    SELECT item_name, color, material
-                    FROM Clothing
-                    WHERE uid = ? AND category = ? AND weather_type = ? AND dress_code = ?
-                    LIMIT 1
-                ''', (self.current_user, category, weather, dress_code))
-                item = self.cursor.fetchone()
-                if item:
-                    outfit[category] = item
-
-            # Display outfit recommendations in the recommendation_frame
-            if outfit:
+            if liked_outfit:
+                # Display the previously liked outfit
                 ttk.Label(self.recommendation_frame, text="Recommended Outfit:", font=('Arial', 12, 'bold')).grid(row=0, column=0, columnspan=2, pady=10)
-                for i, (category, item) in enumerate(outfit.items(), start=1):
-                    item_text = f"{category.capitalize()}: {item[0]} ({item[1]}, {item[2]})"
+                for i, item in enumerate(liked_outfit, start=1):
+                    item_text = f"{item[1].capitalize()}: {item[0]} ({item[3]}, {item[2]})"
                     ttk.Label(self.recommendation_frame, text=item_text).grid(row=i, column=0, columnspan=2, sticky='w')
             else:
-                ttk.Label(self.recommendation_frame, text="No suitable items found. Please add more items to your closet.", font=('Arial', 10)).grid(row=1, column=0, columnspan=2)
+                # Generate a new outfit by fetching items based on weather and dress code
+                categories = ['top', 'bottom', 'outerwear', 'shoes']
+                outfit = {}
+
+                for category in categories:
+                    if category == 'outerwear' and weather == 'hot':
+                        continue
+
+                    self.cursor.execute('''
+                        SELECT item_id, item_name, color, material
+                        FROM Clothing
+                        WHERE uid = ? AND category = ? AND weather_type = ? AND dress_code = ?
+                        LIMIT 1
+                    ''', (self.current_user, category, weather, dress_code))
+                    item = self.cursor.fetchone()
+                    if item:
+                        outfit[category] = item
+
+                # Display the new outfit
+                if outfit:
+                    ttk.Label(self.recommendation_frame, text="Recommended Outfit:", font=('Arial', 12, 'bold')).grid(row=0, column=0, columnspan=2, pady=10)
+                    for i, (category, item) in enumerate(outfit.items(), start=1):
+                        item_text = f"{category.capitalize()}: {item[1]} ({item[2]}, {item[3]})"
+                        ttk.Label(self.recommendation_frame, text=item_text).grid(row=i, column=0, columnspan=2, sticky='w')
+                    
+                    # Add Like and Dislike buttons
+                    ttk.Button(self.recommendation_frame, text="Like", command=lambda: self.store_recommendation(outfit, 'like')).grid(row=len(outfit)+1, column=0, pady=10)
+                    ttk.Button(self.recommendation_frame, text="Dislike", command=self.regenerate_outfit).grid(row=len(outfit)+1, column=1, pady=10)
+                else:
+                    ttk.Label(self.recommendation_frame, text="No suitable items found. Please add more items to your closet.", font=('Arial', 10)).grid(row=1, column=0, columnspan=2)
 
         except sqlite3.Error as e:
             messagebox.showerror("Error", f"Error generating outfit: {str(e)}")
 
-    def display_trending_items(self, frame):
-    # Reset image references to prevent caching of old images
-        self.image_references = []
-
+    def store_recommendation(self, outfit, feedback):
         try:
-            # Fetch 6 trending items from the database
-            self.cursor.execute('''
-                SELECT recommendation_outfit_id, name, purchase_link, rec_type, description
-                FROM TrendingRecommendations
-                ORDER BY recommendation_outfit_id DESC
-                LIMIT 6
-            ''')
-            trending_items = self.cursor.fetchall()
-
-            # Display each item in a grid with up to 3 columns (2 rows)
-            for i, item in enumerate(trending_items):
-                item_frame = ttk.Frame(frame)
-                item_frame.grid(row=i // 3, column=i % 3, padx=10, pady=10)  # 3 columns for a 2x3 grid
-
-                # Display item details
-                ttk.Label(item_frame, text=f"#{item[0]} - {item[1]}", font=('Arial', 11, 'bold')).pack()
-                ttk.Label(item_frame, text=f"Category: {item[3]}", font=('Arial', 10)).pack()
-                ttk.Label(item_frame, text=item[4], font=('Arial', 9)).pack()
-
-                # Load and display image using purchase_link as the image URL
-                image_path = item[2]  # `purchase_link` holds the image path
-                image = self.load_image_from_url(image_path, (100, 100))  # Resize to 100x100 pixels
-
-                if image:
-                    img_label = tk.Label(item_frame, image=image)
-                    img_label.image = image  # Keep a reference to avoid garbage collection
-                    img_label.pack()
-
-                    # Store the image reference to ensure it remains displayed
-                    self.image_references.append(image)
-
+            for category, item in outfit.items():
+                self.cursor.execute('''
+                    INSERT INTO PersonalRecommendations (uid, item_id, weather, dress_code, feedback)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (self.current_user, item[0], self.weather_var.get(), self.dress_code_var.get(), feedback))
+            self.conn.commit()
+            messagebox.showinfo("Feedback Received", "Your feedback has been saved. We’ll prioritize this outfit for similar conditions!")
         except sqlite3.Error as e:
-            messagebox.showerror("Error", f"Error loading trending items: {str(e)}")
+            messagebox.showerror("Error", f"Error saving recommendation: {str(e)}")
 
+    def regenerate_outfit(self):
+        # Clear any disliked outfit for the current weather and dress code
+        try:
+            self.cursor.execute('''
+                DELETE FROM PersonalRecommendations
+                WHERE uid = ? AND weather = ? AND dress_code = ? AND feedback = 'dislike'
+            ''', (self.current_user, self.weather_var.get(), self.dress_code_var.get()))
+            self.conn.commit()
+            # Generate a new outfit
+            self.generate_outfit()
+        except sqlite3.Error as e:
+            messagebox.showerror("Error", f"Error regenerating outfit: {str(e)}")
 
 
     def load_image_from_url(self, url_or_path, size=(100, 100)):
