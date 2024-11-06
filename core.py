@@ -69,6 +69,19 @@ class FashionRecommenderApp:
         )
         ''')
 
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS PersonalRecommendations (
+            recommendation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            uid INTEGER,
+            item_id INTEGER,
+            weather TEXT,
+            dress_code TEXT,
+            feedback TEXT,
+            FOREIGN KEY (uid) REFERENCES User(uid),
+            FOREIGN KEY (item_id) REFERENCES Clothing(item_id)
+        )
+        ''')
+
         # Insert data into TrendingRecommendations table if empty
         self.cursor.execute("SELECT COUNT(*) FROM TrendingRecommendations")
         if self.cursor.fetchone()[0] == 0:
