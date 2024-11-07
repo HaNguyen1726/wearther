@@ -1,4 +1,6 @@
 # WEARTHER Project
+Link: https://github.com/HaNguyen1726/wearther
+
 
 ## Overview
 The Fashion Recommender System is a desktop application designed to help users manage their personal wardrobe and receive personalized outfit recommendations based on their style preferences, weather conditions, and dress code requirements. The application also features trending fashion recommendations for users to explore popular items.
@@ -226,7 +228,7 @@ This section outlines the major commits made during the project, detailing the p
 - Organized code into logical sections for better readability, making it easier for future developers or reviewers to understand and navigate the code.
 
 ## Demo Video
-Link to the project demo video: YouTube Demo Video
+Link to the project demo video: [YouTube Demo Video](https://youtu.be/ldn9zJ40TkU)
 
 
 
